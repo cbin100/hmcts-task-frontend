@@ -1,7 +1,8 @@
-// components/TaskForm.tsx
 "use client";
 
 import { useState } from "react";
+import { createTask } from "@/lib/tasks";
+import type { TaskStatus } from "@/types/task";
 
 type ValidationErrors = {
   title?: string[];
@@ -10,11 +11,7 @@ type ValidationErrors = {
   status?: string[];
 };
 
-export default function TaskForm({
-  onTaskCreated,
-}: {
-  onTaskCreated: () => void;
-}) {
+export default function TaskForm({ onTaskCreated }: { onTaskCreated: () => void }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueAt, setDueAt] = useState("");
@@ -26,42 +23,24 @@ export default function TaskForm({
     setLoading(true);
     setErrors({});
 
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/tasks`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-          },
-          body: JSON.stringify({
-            title,
-            description,
-            status: "pending",
-            due_at: dueAt,
-          }),
-        }
-      );
+    const { ok, status, json } = await createTask({
+      title,
+      description,
+      status: "pending" as TaskStatus,
+      due_at: dueAt,
+    });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        setErrors(result.errors ?? {});
-        return;
-      }
-
-      // Success
-      setTitle("");
-      setDescription("");
-      setDueAt("");
-      onTaskCreated();
-
-    } catch (error) {
-      console.error("Network error:", error);
-    } finally {
+    if (!ok) {
+      if (status === 422) setErrors(json.errors ?? {});
       setLoading(false);
+      return;
     }
+
+    setTitle("");
+    setDescription("");
+    setDueAt("");
+    setLoading(false);
+    onTaskCreated();
   };
 
   return (
@@ -76,11 +55,7 @@ export default function TaskForm({
           onChange={(e) => setTitle(e.target.value)}
           className="border p-2 w-full rounded"
         />
-        {errors.title && (
-          <p className="text-red-500 text-sm mt-1">
-            {errors.title[0]}
-          </p>
-        )}
+        {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title[0]}</p>}
       </div>
 
       <div>
@@ -91,9 +66,7 @@ export default function TaskForm({
           className="border p-2 w-full rounded"
         />
         {errors.description && (
-          <p className="text-red-500 text-sm mt-1">
-            {errors.description[0]}
-          </p>
+          <p className="text-red-500 text-sm mt-1">{errors.description[0]}</p>
         )}
       </div>
 
@@ -105,11 +78,7 @@ export default function TaskForm({
           onChange={(e) => setDueAt(e.target.value)}
           className="border p-2 w-full rounded"
         />
-        {errors.due_at && (
-          <p className="text-red-500 text-sm mt-1">
-            {errors.due_at[0]}
-          </p>
-        )}
+        {errors.due_at && <p className="text-red-500 text-sm mt-1">{errors.due_at[0]}</p>}
       </div>
 
       <button

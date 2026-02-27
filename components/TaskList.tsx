@@ -1,7 +1,7 @@
-// components/TaskList.tsx
 "use client";
 
-import { Task } from "@/app/page";
+import type { Task, TaskStatus } from "@/types/task";
+import { deleteTask, updateTaskStatus } from "@/lib/tasks";
 
 export default function TaskList({
   tasks,
@@ -10,29 +10,20 @@ export default function TaskList({
   tasks: Task[];
   refresh: () => void;
 }) {
-  const updateStatus = async (id: string, status: string) => {
-  await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/tasks/${id}/status`,
-    {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    }
-  );
-  refresh();
-};
+  const updateStatus = async (id: string, status: TaskStatus) => {
+    await updateTaskStatus(id, status);
+    refresh();
+  };
 
-const deleteTask = async (id: string) => {
-  await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/tasks/${id}`,
-    { method: "DELETE" }
-  );
-  refresh();
-};
+  const remove = async (id: string) => {
+    await deleteTask(id);
+    refresh();
+  };
 
   return (
     <div>
       <h2>Tasks</h2>
+
       {tasks.map((task) => {
         const overdue = new Date(task.due_at) < new Date();
 
@@ -53,17 +44,14 @@ const deleteTask = async (id: string) => {
 
             <select
               value={task.status}
-              onChange={(e) => updateStatus(task.id, e.target.value)}
+              onChange={(e) => updateStatus(task.id, e.target.value as TaskStatus)}
             >
               <option value="pending">Pending</option>
               <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
             </select>
 
-            <button
-              onClick={() => deleteTask(task.id)}
-              style={{ marginLeft: "10px" }}
-            >
+            <button onClick={() => remove(task.id)} style={{ marginLeft: "10px" }}>
               Delete
             </button>
           </div>

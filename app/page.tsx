@@ -1,24 +1,10 @@
-// app/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import TaskForm from "@/components/TaskForm";
 import TaskList from "@/components/TaskList";
-
-export interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  status: "pending" | "in_progress" | "completed";
-  due_at: string;
-}
-
-interface PaginationMeta {
-  current_page: number;
-  last_page: number;
-  per_page: number;
-  total: number;
-}
+import { fetchTasks } from "@/lib/tasks";
+import type { PaginationMeta, Task } from "@/types/task";
 
 export default function Home() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -26,38 +12,23 @@ export default function Home() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<string>("");
 
-  const fetchTasks = async (
-    pageNumber = 1,
-    statusFilter = status
-  ) => {
-    const query = new URLSearchParams();
-
-    query.append("page", pageNumber.toString());
-
-    if (statusFilter) {
-      query.append("status", statusFilter);
-    }
-
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/tasks?${query.toString()}`
-    );
-
-    const data = await res.json();
-
-    setTasks(data.data);
-    setMeta(data.meta);
+  const load = async (pageNumber = 1, statusFilter = status) => {
+    const res = await fetchTasks({ page: pageNumber, status: statusFilter });
+    setTasks(res.data);
+    setMeta(res.meta);
     setPage(pageNumber);
   };
 
   useEffect(() => {
-    fetchTasks(1);
+    load(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <main style={{ padding: "40px", maxWidth: "800px", margin: "0 auto" }}>
       <h1>HMCTS Task Manager</h1>
 
-      <TaskForm onTaskCreated={() => fetchTasks(page)} />
+      <TaskForm onTaskCreated={() => load(page)} />
 
       <div style={{ margin: "20px 0" }}>
         <label>Status: </label>
@@ -66,7 +37,7 @@ export default function Home() {
           onChange={(e) => {
             const newStatus = e.target.value;
             setStatus(newStatus);
-            fetchTasks(1, newStatus);
+            load(1, newStatus);
           }}
         >
           <option value="">All</option>
@@ -76,14 +47,11 @@ export default function Home() {
         </select>
       </div>
 
-      <TaskList tasks={tasks} refresh={() => fetchTasks(page)} />
+      <TaskList tasks={tasks} refresh={() => load(page)} />
 
       {meta && (
         <div style={{ marginTop: "20px" }}>
-          <button
-            disabled={page <= 1}
-            onClick={() => fetchTasks(page - 1)}
-          >
+          <button disabled={page <= 1} onClick={() => load(page - 1)}>
             Previous
           </button>
 
@@ -93,7 +61,7 @@ export default function Home() {
 
           <button
             disabled={page >= meta.last_page}
-            onClick={() => fetchTasks(page + 1)}
+            onClick={() => load(page + 1)}
           >
             Next
           </button>
